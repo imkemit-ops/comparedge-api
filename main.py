@@ -408,6 +408,29 @@ LANDING_HTML = """<!DOCTYPE html>
 # ---------------------------------------------------------------------------
 
 
+@app.get("/api/v1", summary="API overview", tags=["System"])
+async def api_overview():
+    """API root — returns version, endpoints, and stats."""
+    db = get_db()
+    return {
+        "name": "ComparEdge Software Intelligence API",
+        "version": "1.0",
+        "products": len(db["products"]),
+        "categories": len(db["categories"]),
+        "endpoints": {
+            "products": "/api/v1/products",
+            "categories": "/api/v1/categories",
+            "compare": "/api/v1/compare/{slug1}/{slug2}",
+            "search": "/api/v1/search?q=",
+            "zapier": "/api/v1/zapier/products",
+            "download_csv": "/download/csv",
+            "download_db": "/download/db_dump",
+        },
+        "docs": "https://comparedge-api.up.railway.app/docs",
+        "website": "https://comparedge.com",
+    }
+
+
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def root():
     """Landing page with ComparEdge branding and API documentation links."""
