@@ -7,7 +7,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)](https://fastapi.tiangolo.com)
 [![Deployed on Railway](https://img.shields.io/badge/Railway-deployed-purple)](https://railway.app)
 
-Structured data for **300+ software products** across **28 categories** — pricing plans, feature lists,
+Structured data for **hundreds of software products** across **dozens of categories** — pricing plans, feature lists,
 G2 ratings, and head-to-head comparisons. All sourced from [comparedge.com](https://comparedge.com).
 
 ---
@@ -167,7 +167,7 @@ curl "https://your-api.railway.app/api/v1/stats"
 **Response:**
 ```json
 {
-  "total_products": 331,
+  "total_products": "...",
   "total_categories": 28,
   "products_with_free_tier": 187,
   "free_tier_percentage": 56.5,
@@ -185,7 +185,7 @@ Health check.
 
 ```bash
 curl "https://your-api.railway.app/health"
-# → { "status": "ok", "products": 331, "categories": 28, ... }
+# → { "status": "ok", "products": "...", "categories": "...", ... }
 ```
 
 ---
