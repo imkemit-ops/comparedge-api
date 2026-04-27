@@ -416,7 +416,7 @@ async def api_overview():
         "name": "ComparEdge Software Intelligence API",
         "version": "1.0",
         "products": len(db["products"]),
-        "categories": len(db["categories"]),
+        "categories": len(db.get("by_category", {})),
         "endpoints": {
             "products": "/api/v1/products",
             "categories": "/api/v1/categories",
