@@ -845,6 +845,39 @@ def download_db_dump():
 
 
 @app.get(
+    "/api/v1/zapier/products",
+    summary="Zapier-compatible product list",
+    tags=["Integrations"],
+    response_description="Flat array of products with id field (Zapier polling trigger format)",
+)
+def zapier_products(limit: int = 10, offset: int = 0):
+    """
+    Returns products as a flat JSON array with `id` field on each item.
+    Designed for Zapier polling triggers.
+    """
+    db = get_db()
+    products = db["products"][offset:offset + limit]
+    results = []
+    for i, p in enumerate(products):
+        rating = p.get("rating") or p.get("ratings") or {}
+        pricing = p.get("pricing", {})
+        plans = pricing.get("plans") or []
+        paid = [pl["price"] for pl in plans if pl.get("price") and pl["price"] > 0]
+        results.append({
+            "id": p["slug"],
+            "name": p["name"],
+            "category": p.get("category", ""),
+            "description": p.get("description", ""),
+            "g2_rating": rating.get("g2"),
+            "has_free_tier": pricing.get("free", False),
+            "starting_price": min(paid) if paid else None,
+            "website": p.get("url", ""),
+            "comparedge_url": f"https://comparedge.com/tools/{p['slug']}",
+        })
+    return results
+
+
+@app.get(
     "/download/csv",
     summary="Download products as CSV",
     tags=["Downloads"],
