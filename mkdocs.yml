@@ -1,0 +1,19 @@
+site_name: ComparEdge API Docs
+site_url: https://comparedge-saas-pricing-api.readthedocs.io
+site_description: REST API documentation for ComparEdge — 331 SaaS products, pricing data, comparisons.
+repo_url: https://github.com/imkemit-ops/comparedge-api
+
+theme:
+  name: material
+  palette:
+    primary: blue
+  features:
+    - navigation.instant
+    - navigation.tabs
+
+nav:
+  - Home: index.md
+  - Download Endpoints: download-endpoints.md
+
+plugins:
+  - search
