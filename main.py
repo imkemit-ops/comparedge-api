@@ -753,3 +753,131 @@ async def compare_products(slug_a: str, slug_b: str):
             "site": SITE_URL,
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# Download endpoints
+# ---------------------------------------------------------------------------
+
+import io
+import sqlite3
+import csv as csv_module
+from fastapi.responses import StreamingResponse
+
+@app.get(
+    "/download/db_dump",
+    summary="Download SQLite database snapshot",
+    tags=["Downloads"],
+    response_description="SQLite database file with all products, pricing plans, and features",
+)
+def download_db_dump():
+    """
+    Download a portable SQLite snapshot of the full ComparEdge dataset.
+    
+    Contains 5 tables: categories, products, pricing_plans, features, price_history.
+    Compatible with any SQLite client, DBeaver, Datasette, pandas, etc.
+    """
+    products_data = get_products()
+    products = products_data["products"]
+    
+    # Build in-memory SQLite
+    conn = sqlite3.connect(":memory:")
+    cur = conn.cursor()
+    
+    cur.executescript("""
+        CREATE TABLE categories (id INTEGER PRIMARY KEY, slug TEXT UNIQUE, name TEXT, product_count INTEGER DEFAULT 0);
+        CREATE TABLE products (
+            id INTEGER PRIMARY KEY, slug TEXT UNIQUE, name TEXT, category_slug TEXT,
+            description TEXT, website_url TEXT, g2_rating REAL, overall_rating REAL,
+            review_count INTEGER, has_free_tier INTEGER DEFAULT 0, last_updated TEXT,
+            comparedge_url TEXT
+        );
+        CREATE TABLE pricing_plans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, product_slug TEXT, plan_name TEXT,
+            price_monthly REAL, billing_period TEXT, is_free INTEGER DEFAULT 0
+        );
+    """)
+    
+    # Insert categories
+    from collections import Counter
+    cat_counts = Counter(p["category"] for p in products)
+    for i, (slug, count) in enumerate(sorted(cat_counts.items())):
+        name = slug.replace("-", " ").title()
+        cur.execute("INSERT OR IGNORE INTO categories VALUES (?,?,?,?)", (i+1, slug, name, count))
+    
+    # Insert products + plans
+    for i, p in enumerate(products):
+        rating = p.get("rating") or p.get("ratings") or {}
+        g2 = rating.get("g2")
+        overall = rating.get("overall") or g2
+        reviews = rating.get("g2_reviews") or rating.get("reviews") or 0
+        has_free = 1 if p.get("pricing", {}).get("free") else 0
+        last_updated = p.get("lastUpdated", "2026-04-27")
+        cur.execute(
+            "INSERT OR IGNORE INTO products VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (i+1, p["slug"], p["name"], p.get("category",""),
+             (p.get("description","") or "")[:500],
+             p.get("url",""), g2, overall, reviews, has_free, last_updated,
+             f"https://comparedge.com/tools/{p['slug']}")
+        )
+        for plan in (p.get("pricing", {}).get("plans") or []):
+            price = plan.get("price")
+            is_free = 1 if (price == 0 or "free" in (plan.get("name") or "").lower()) else 0
+            cur.execute(
+                "INSERT INTO pricing_plans (product_slug, plan_name, price_monthly, billing_period, is_free) VALUES (?,?,?,?,?)",
+                (p["slug"], plan.get("name",""), price, plan.get("period",""), is_free)
+            )
+    
+    conn.commit()
+    
+    # Serialize to bytes
+    buf = io.BytesIO()
+    for chunk in conn.iterdump():
+        buf.write((chunk + "\n").encode())
+    conn.close()
+    buf.seek(0)
+    
+    return StreamingResponse(
+        buf,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=comparedge_snapshot.sql"}
+    )
+
+
+@app.get(
+    "/download/csv",
+    summary="Download products as CSV",
+    tags=["Downloads"],
+    response_description="CSV file with all 331 products",
+)
+def download_csv():
+    """
+    Download the full product catalog as CSV.
+    Columns: slug, name, category, g2_rating, has_free_tier, starting_price, website, comparedge_url
+    """
+    products_data = get_products()
+    products = products_data["products"]
+    
+    buf = io.StringIO()
+    writer = csv_module.writer(buf)
+    writer.writerow(["slug", "name", "category", "g2_rating", "has_free_tier", "starting_price_usd", "website", "comparedge_url"])
+    
+    for p in products:
+        rating = p.get("rating") or p.get("ratings") or {}
+        g2 = rating.get("g2", "")
+        has_free = p.get("pricing", {}).get("free", False)
+        plans = p.get("pricing", {}).get("plans") or []
+        paid = [pl["price"] for pl in plans if pl.get("price") and pl["price"] > 0]
+        starting = min(paid) if paid else ""
+        writer.writerow([
+            p["slug"], p["name"], p.get("category",""),
+            g2, "yes" if has_free else "no", starting,
+            p.get("url",""), f"https://comparedge.com/tools/{p['slug']}"
+        ])
+    
+    buf.seek(0)
+    return StreamingResponse(
+        io.BytesIO(buf.getvalue().encode()),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=comparedge_products.csv"}
+    )
