@@ -1,0 +1,22 @@
+[project]
+name = "comparedge-api"
+version = "1.0.0"
+description = "REST API for ComparEdge software comparison data"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["saas", "software", "comparison", "api", "fastapi"]
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.30.0",
+]
+
+[project.urls]
+Homepage = "https://comparedge.com"
+Repository = "https://github.com/comparedge/awesome-saas-comparison-data"
+Documentation = "https://comparedge.com/api"
+"Bug Tracker" = "https://github.com/comparedge/awesome-saas-comparison-data/issues"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends.legacy:build"
