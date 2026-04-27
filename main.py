@@ -777,7 +777,7 @@ def download_db_dump():
     Contains 5 tables: categories, products, pricing_plans, features, price_history.
     Compatible with any SQLite client, DBeaver, Datasette, pandas, etc.
     """
-    products_data = get_products()
+    products_data = get_db()
     products = products_data["products"]
     
     # Build in-memory SQLite
@@ -855,7 +855,7 @@ def download_csv():
     Download the full product catalog as CSV.
     Columns: slug, name, category, g2_rating, has_free_tier, starting_price, website, comparedge_url
     """
-    products_data = get_products()
+    products_data = get_db()
     products = products_data["products"]
     
     buf = io.StringIO()
